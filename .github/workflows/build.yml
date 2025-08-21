@@ -71,26 +71,21 @@ jobs:
         if [ ! -d "$PROJECT_NAME.xcarchive" ]; then
           echo "Creating basic archive structure..."
           mkdir -p "$PROJECT_NAME.xcarchive/Products/Applications"
-          # Копируем Info.plist если он есть
-          if [ -f "Info.plist" ]; then
-            cp "Info.plist" "$PROJECT_NAME.xcarchive/"
-          else
-            # Создаем минимальный Info.plist
-            echo '<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleIdentifier</key>
-    <string>com.example.BootMonitor</string>
-    <key>CFBundleName</key>
-    <string>BootMonitor</string>
-    <key>CFBundleVersion</key>
-    <string>1.0</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
-</dict>
-</plist>' > "$PROJECT_NAME.xcarchive/Info.plist"
-          fi
+          # Создаем минимальный Info.plist
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > "$PROJECT_NAME.xcarchive/Info.plist"
+          echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> "$PROJECT_NAME.xcarchive/Info.plist"
+          echo '<plist version="1.0">' >> "$PROJECT_NAME.xcarchive/Info.plist"
+          echo '<dict>' >> "$PROJECT_NAME.xcarchive/Info.plist"
+          echo '    <key>CFBundleIdentifier</key>' >> "$PROJECT_NAME.xcarchive/Info.plist"
+          echo '    <string>com.example.BootMonitor</string>' >> "$PROJECT_NAME.xcarchive/Info.plist"
+          echo '    <key>CFBundleName</key>' >> "$PROJECT_NAME.xcarchive/Info.plist"
+          echo '    <string>BootMonitor</string>' >> "$PROJECT_NAME.xcarchive/Info.plist"
+          echo '    <key>CFBundleVersion</key>' >> "$PROJECT_NAME.xcarchive/Info.plist"
+          echo '    <string>1.0</string>' >> "$PROJECT_NAME.xcarchive/Info.plist"
+          echo '    <key>CFBundleShortVersionString</key>' >> "$PROJECT_NAME.xcarchive/Info.plist"
+          echo '    <string>1.0.0</string>' >> "$PROJECT_NAME.xcarchive/Info.plist"
+          echo '</dict>' >> "$PROJECT_NAME.xcarchive/Info.plist"
+          echo '</plist>' >> "$PROJECT_NAME.xcarchive/Info.plist"
         fi
         echo "Archive handling completed"
 
