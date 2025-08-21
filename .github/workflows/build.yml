@@ -27,16 +27,25 @@ jobs:
 
     - name: Определение параметров проекта
       run: |
-        PROJECT_FILE=$(find . -maxdepth 1 -name "*.xcodeproj" | head -n 1)
+        echo "Содержимое директории:"
+        ls -la
+        
+        # Поиск xcodeproj файлов рекурсивно
+        PROJECT_FILE=$(find . -name "*.xcodeproj" -type d | head -n 1)
+        
         if [ -z "$PROJECT_FILE" ]; then
-          echo "Xcode project not found"
+          echo "Xcode project not found in current directory structure"
+          echo "Files in current directory:"
+          find . -maxdepth 3 -type f -name "*.xcodeproj" -o -name "*.xcworkspace"
           exit 1
         fi
+        
         PROJECT_NAME=$(basename "$PROJECT_FILE" .xcodeproj)
         echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
         echo "Found project: $PROJECT_NAME"
 
-        SCHEME_NAME=$(xcodebuild -project "$PROJECT_FILE" -list -json | jq -r '.project.schemes[0]')
+        # Получение схемы из проекта
+        SCHEME_NAME=$(xcodebuild -project "$PROJECT_FILE" -list -json 2>/dev/null | jq -r '.project.schemes[0]' 2>/dev/null)
         if [ "$SCHEME_NAME" = "null" ] || [ -z "$SCHEME_NAME" ]; then
           SCHEME_NAME="$PROJECT_NAME"
         fi
@@ -46,10 +55,10 @@ jobs:
     - name: Сборка и архивирование приложения (без подписи)
       run: |
         rm -rf ~/Library/Developer/Xcode/DerivedData
-        rm -rf "$PROJECT_NAME.xcarchive"
+        rm -rf "$PROJECT_NAME.xcarchive" 2>/dev/null || true
 
         xcodebuild archive \
-          -project "$PROJECT_NAME.xcodeproj" \
+          -project "$(find . -name "*.xcodeproj" -type d | head -n 1)" \
           -scheme "$SCHEME_NAME" \
           -configuration Release \
           -archivePath "$PROJECT_NAME.xcarchive" \
