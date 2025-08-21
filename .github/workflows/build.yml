@@ -25,33 +25,23 @@ jobs:
       run: |
         brew install xcbeautify jq
 
-    - name: Создание Xcode проекта из Swift Package
-      run: |
-        # Генерация Xcode проекта из Swift Package
-        swift package generate-xcodeproj
-        echo "Содержимое директории после генерации:"
-        ls -la
-
     - name: Определение параметров проекта
       run: |
         echo "Содержимое директории:"
         ls -la
         
-        # Поиск xcodeproj файлов
-        PROJECT_FILE=$(find . -name "*.xcodeproj" -type d | head -n 1)
-        
-        if [ -z "$PROJECT_FILE" ]; then
-          echo "Xcode project not found"
-          echo "Все файлы в директории:"
-          find . -type f -name "*.xcodeproj"
+        # Проверяем, есть ли Package.swift
+        if [ ! -f "Package.swift" ]; then
+          echo "Package.swift not found"
           exit 1
         fi
         
-        PROJECT_NAME=$(basename "$PROJECT_FILE" .xcodeproj)
+        # Имя проекта будет таким же, как имя директории
+        PROJECT_NAME=$(basename "$PWD")
         echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
-        echo "Found project: $PROJECT_NAME"
-
-        # Для Swift Package проектов схема обычно совпадает с именем проекта
+        echo "Using project name: $PROJECT_NAME"
+        
+        # Схема для Swift Package
         SCHEME_NAME="$PROJECT_NAME"
         echo "SCHEME_NAME=$SCHEME_NAME" >> $GITHUB_ENV
         echo "Using scheme: $SCHEME_NAME"
@@ -61,8 +51,8 @@ jobs:
         rm -rf ~/Library/Developer/Xcode/DerivedData
         rm -rf "$PROJECT_NAME.xcarchive" 2>/dev/null || true
 
+        # Используем xcodebuild напрямую с Package.swift
         xcodebuild archive \
-          -project "$(find . -name "*.xcodeproj" -type d | head -n 1)" \
           -scheme "$SCHEME_NAME" \
           -configuration Release \
           -archivePath "$PROJECT_NAME.xcarchive" \
