@@ -25,26 +25,6 @@ jobs:
       run: |
         brew install xcbeautify jq
 
-    - name: Установка сертификата подписи
-      env:
-        CERTIFICATE_P12: ${{ secrets.CERTIFICATE_P12 }}
-        CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
-        PROVISIONING_PROFILE: ${{ secrets.PROVISIONING_PROFILE }}
-        KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-      run: |
-        security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-        security default-keychain -s build.keychain
-        security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-        security set-keychain-settings -lut 21600 build.keychain
-
-        echo -n "$CERTIFICATE_P12" | base64 --decode -o certificate.p12
-        security import certificate.p12 -k build.keychain -P "$CERT_PASSWORD" -A
-
-        security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" build.keychain
-
-        mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-        echo -n "$PROVISIONING_PROFILE" | base64 --decode -o ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
-
     - name: Определение параметров проекта
       run: |
         PROJECT_FILE=$(find . -d 1 -name "*.xcodeproj" | head -n 1)
@@ -58,9 +38,7 @@ jobs:
         SCHEME_NAME=$(xcodebuild -project "$PROJECT_FILE" -list -json | jq -r '.project.schemes[0]')
         echo "SCHEME_NAME=$SCHEME_NAME" >> $GITHUB_ENV
 
-    - name: Сборка и архивирование приложения
-      env:
-        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    - name: Сборка и архивирование приложения (без подписи)
       run: |
         rm -rf ~/Library/Developer/Xcode/DerivedData
 
@@ -72,9 +50,7 @@ jobs:
           -sdk iphoneos \
           -destination 'generic/platform=iOS' \
           -derivedDataPath derived_data \
-          CODE_SIGN_STYLE=Manual \
-          DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-          CODE_SIGN_IDENTITY="iPhone Distribution" \
+          CODE_SIGNING_ALLOWED=NO \
           | xcbeautify
 
         if [ ! -d "$PROJECT_NAME.xcarchive" ]; then
@@ -82,19 +58,15 @@ jobs:
           exit 1
         fi
 
-    - name: Экспорт IPA файла
-      env:
-        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    - name: Экспорт IPA файла (без подписи)
       run: |
-        # Создание exportOptions.plist с правильным экранированием
+        # Создание exportOptions.plist для неподписанного приложения
         echo '<?xml version="1.0" encoding="UTF-8"?>' > exportOptions.plist
         echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> exportOptions.plist
         echo '<plist version="1.0">' >> exportOptions.plist
         echo '<dict>' >> exportOptions.plist
         echo '    <key>method</key>' >> exportOptions.plist
-        echo '    <string>app-store</string>' >> exportOptions.plist
-        echo '    <key>teamID</key>' >> exportOptions.plist
-        echo '    <string>'"$APPLE_TEAM_ID"'</string>' >> exportOptions.plist
+        echo '    <string>development</string>' >> exportOptions.plist
         echo '    <key>compileBitcode</key>' >> exportOptions.plist
         echo '    <false/>' >> exportOptions.plist
         echo '    <key>thinning</key>' >> exportOptions.plist
@@ -132,4 +104,14 @@ jobs:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./${{ env.PROJECT_NAME }}.ipa
         asset_name: ${{ env.PROJECT_NAME }}.ipa
+        asset_content_type: application/octet-stream
+
+    - name: Загрузка архива в Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./${{ env.PROJECT_NAME }}.xcarchive
+        asset_name: ${{ env.PROJECT_NAME }}.xcarchive
         asset_content_type: application/octet-stream
