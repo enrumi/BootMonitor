@@ -1,139 +1,135 @@
 name: Build iOS App
 
 on:
-push:
-branches: [ main ]
-pull_request:
-branches: [ main ]
-workflow_dispatch:
-inputs:
-version:
-description: ‘Version tag (e.g., v1.0.0)’
-required: true
-default: ‘v1.0.0’
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
 
 jobs:
-build:
-name: Сборка iOS приложения
-runs-on: macos-latest
+  build:
+    name: Сборка iOS приложения
+    runs-on: macos-latest
 
-```
-steps:
-- name: Checkout кода
-  uses: actions/checkout@v4
+    steps:
+    - name: Checkout кода
+      uses: actions/checkout@v4
 
-- name: Установка утилит
-  run: |
-    brew install xcbeautify jq
+    - name: Установка утилит
+      run: |
+        brew install xcbeautify jq
 
-- name: Определение параметров проекта
-  run: |
-    PROJECT_FILE=$(find . -maxdepth 1 -name "*.xcodeproj" | head -n 1)
-    if [ -z "$PROJECT_FILE" ]; then
-      echo "Xcode project not found"
-      exit 1
-    fi
-    PROJECT_NAME=$(basename "$PROJECT_FILE" .xcodeproj)
-    echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
-    echo "Found project: $PROJECT_NAME"
+    - name: Определение параметров проекта
+      run: |
+        PROJECT_FILE=$(find . -maxdepth 1 -name "*.xcodeproj" | head -n 1)
+        if [ -z "$PROJECT_FILE" ]; then
+          echo "Xcode project not found"
+          exit 1
+        fi
+        PROJECT_NAME=$(basename "$PROJECT_FILE" .xcodeproj)
+        echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
+        echo "Found project: $PROJECT_NAME"
 
-    SCHEME_NAME=$(xcodebuild -project "$PROJECT_FILE" -list -json | jq -r '.project.schemes[0]')
-    if [ "$SCHEME_NAME" = "null" ] || [ -z "$SCHEME_NAME" ]; then
-      SCHEME_NAME="$PROJECT_NAME"
-    fi
-    echo "SCHEME_NAME=$SCHEME_NAME" >> $GITHUB_ENV
-    echo "Using scheme: $SCHEME_NAME"
+        SCHEME_NAME=$(xcodebuild -project "$PROJECT_FILE" -list -json | jq -r '.project.schemes[0]')
+        if [ "$SCHEME_NAME" = "null" ] || [ -z "$SCHEME_NAME" ]; then
+          SCHEME_NAME="$PROJECT_NAME"
+        fi
+        echo "SCHEME_NAME=$SCHEME_NAME" >> $GITHUB_ENV
+        echo "Using scheme: $SCHEME_NAME"
 
-- name: Сборка и архивирование приложения (без подписи)
-  run: |
-    rm -rf ~/Library/Developer/Xcode/DerivedData
-    rm -rf "$PROJECT_NAME.xcarchive"
+    - name: Сборка и архивирование приложения (без подписи)
+      run: |
+        rm -rf ~/Library/Developer/Xcode/DerivedData
+        rm -rf "$PROJECT_NAME.xcarchive"
 
-    xcodebuild archive \
-      -project "$PROJECT_NAME.xcodeproj" \
-      -scheme "$SCHEME_NAME" \
-      -configuration Release \
-      -archivePath "$PROJECT_NAME.xcarchive" \
-      -sdk iphoneos \
-      -destination 'generic/platform=iOS' \
-      -derivedDataPath derived_data \
-      CODE_SIGNING_ALLOWED=NO \
-      CODE_SIGN_IDENTITY="" \
-      PROVISIONING_PROFILE="" \
-      DEVELOPMENT_TEAM="" \
-      | xcbeautify
+        xcodebuild archive \
+          -project "$PROJECT_NAME.xcodeproj" \
+          -scheme "$SCHEME_NAME" \
+          -configuration Release \
+          -archivePath "$PROJECT_NAME.xcarchive" \
+          -sdk iphoneos \
+          -destination 'generic/platform=iOS' \
+          -derivedDataPath derived_data \
+          CODE_SIGNING_ALLOWED=NO \
+          CODE_SIGN_IDENTITY="" \
+          PROVISIONING_PROFILE="" \
+          DEVELOPMENT_TEAM="" \
+          | xcbeautify
 
-    if [ ! -d "$PROJECT_NAME.xcarchive" ]; then
-      echo "Archive not created"
-      exit 1
-    fi
-    echo "Archive created successfully"
+        if [ ! -d "$PROJECT_NAME.xcarchive" ]; then
+          echo "Archive not created"
+          exit 1
+        fi
+        echo "Archive created successfully"
 
-- name: Экспорт IPA файла (без подписи)
-  run: |
-    # Создание exportOptions.plist для неподписанного приложения
-    cat > exportOptions.plist << EOF
-    <?xml version="1.0" encoding="UTF-8"?>
-    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-    <plist version="1.0">
-    <dict>
-        <key>method</key>
-        <string>development</string>
-        <key>compileBitcode</key>
-        <false/>
-        <key>thinning</key>
-        <string>&lt;none&gt;</string>
-        <key>signingStyle</key>
-        <string>manual</string>
-        <key>stripSwiftSymbols</key>
-        <true/>
-    </dict>
-    </plist>
-    EOF
+    - name: Экспорт IPA файла (без подписи)
+      run: |
+        # Создание exportOptions.plist для неподписанного приложения
+        echo '<?xml version="1.0" encoding="UTF-8"?>' > exportOptions.plist
+        echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> exportOptions.plist
+        echo '<plist version="1.0">' >> exportOptions.plist
+        echo '<dict>' >> exportOptions.plist
+        echo '    <key>method</key>' >> exportOptions.plist
+        echo '    <string>development</string>' >> exportOptions.plist
+        echo '    <key>compileBitcode</key>' >> exportOptions.plist
+        echo '    <false/>' >> exportOptions.plist
+        echo '    <key>thinning</key>' >> exportOptions.plist
+        echo '    <string><none></string>' >> exportOptions.plist
+        echo '    <key>signingStyle</key>' >> exportOptions.plist
+        echo '    <string>manual</string>' >> exportOptions.plist
+        echo '    <key>stripSwiftSymbols</key>' >> exportOptions.plist
+        echo '    <true/>' >> exportOptions.plist
+        echo '</dict>' >> exportOptions.plist
+        echo '</plist>' >> exportOptions.plist
 
-    xcodebuild -exportArchive \
-      -archivePath "$PROJECT_NAME.xcarchive" \
-      -exportPath export \
-      -exportOptionsPlist exportOptions.plist \
-      | xcbeautify
+        xcodebuild -exportArchive \
+          -archivePath "$PROJECT_NAME.xcarchive" \
+          -exportPath export \
+          -exportOptionsPlist exportOptions.plist \
+          | xcbeautify
 
-    # Поиск созданного IPA файла
-    IPA_FILE=$(find export -name "*.ipa" | head -n 1)
-    if [ -z "$IPA_FILE" ]; then
-      echo "IPA file not created"
-      ls -la export/
-      exit 1
-    fi
-    
-    # Копирование IPA файла в корень
-    cp "$IPA_FILE" "$PROJECT_NAME.ipa"
-    echo "IPA file created: $PROJECT_NAME.ipa"
+        # Поиск созданного IPA файла
+        IPA_FILE=$(find export -name "*.ipa" | head -n 1)
+        if [ -z "$IPA_FILE" ]; then
+          echo "IPA file not created"
+          ls -la export/
+          exit 1
+        fi
+        
+        # Копирование IPA файла в корень
+        cp "$IPA_FILE" "$PROJECT_NAME.ipa"
+        echo "IPA file created: $PROJECT_NAME.ipa"
 
-- name: Создание архива xcarchive для загрузки
-  run: |
-    tar -czf "$PROJECT_NAME.xcarchive.tar.gz" "$PROJECT_NAME.xcarchive"
-    echo "Archive compressed: $PROJECT_NAME.xcarchive.tar.gz"
+    - name: Создание архива xcarchive для загрузки
+      run: |
+        tar -czf "$PROJECT_NAME.xcarchive.tar.gz" "$PROJECT_NAME.xcarchive"
+        echo "Archive compressed: $PROJECT_NAME.xcarchive.tar.gz"
 
-- name: Создание GitHub Release
-  id: create_release
-  uses: softprops/action-gh-release@v2
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  with:
-    tag_name: ${{ github.event.inputs.version || format('v{0}', github.run_number) }}
-    name: Release ${{ github.event.inputs.version || format('v{0}', github.run_number) }}
-    draft: false
-    prerelease: false
-    files: |
-      ${{ env.PROJECT_NAME }}.ipa
-      ${{ env.PROJECT_NAME }}.xcarchive.tar.gz
+    - name: Создание GitHub Release
+      id: create_release
+      uses: softprops/action-gh-release@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.event.inputs.version || format('v{0}', github.run_number) }}
+        name: Release ${{ github.event.inputs.version || format('v{0}', github.run_number) }}
+        draft: false
+        prerelease: false
+        files: |
+          ${{ env.PROJECT_NAME }}.ipa
+          ${{ env.PROJECT_NAME }}.xcarchive.tar.gz
 
-- name: Загрузка артефактов
-  uses: actions/upload-artifact@v4
-  with:
-    name: ios-build-artifacts
-    path: |
-      ${{ env.PROJECT_NAME }}.ipa
-      ${{ env.PROJECT_NAME }}.xcarchive.tar.gz
-    retention-days: 30
-```
+    - name: Загрузка артефактов
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-build-artifacts
+        path: |
+          ${{ env.PROJECT_NAME }}.ipa
+          ${{ env.PROJECT_NAME }}.xcarchive.tar.gz
+        retention-days: 30
