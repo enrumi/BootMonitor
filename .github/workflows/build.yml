@@ -72,42 +72,55 @@ jobs:
           echo "Creating basic archive structure..."
           mkdir -p "$PROJECT_NAME.xcarchive/Products/Applications"
           # Создаем минимальный Info.plist
-          echo '<?xml version="1.0" encoding="UTF-8"?>' > "$PROJECT_NAME.xcarchive/Info.plist"
-          echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> "$PROJECT_NAME.xcarchive/Info.plist"
-          echo '<plist version="1.0">' >> "$PROJECT_NAME.xcarchive/Info.plist"
-          echo '<dict>' >> "$PROJECT_NAME.xcarchive/Info.plist"
-          echo '    <key>CFBundleIdentifier</key>' >> "$PROJECT_NAME.xcarchive/Info.plist"
-          echo '    <string>com.example.BootMonitor</string>' >> "$PROJECT_NAME.xcarchive/Info.plist"
-          echo '    <key>CFBundleName</key>' >> "$PROJECT_NAME.xcarchive/Info.plist"
-          echo '    <string>BootMonitor</string>' >> "$PROJECT_NAME.xcarchive/Info.plist"
-          echo '    <key>CFBundleVersion</key>' >> "$PROJECT_NAME.xcarchive/Info.plist"
-          echo '    <string>1.0</string>' >> "$PROJECT_NAME.xcarchive/Info.plist"
-          echo '    <key>CFBundleShortVersionString</key>' >> "$PROJECT_NAME.xcarchive/Info.plist"
-          echo '    <string>1.0.0</string>' >> "$PROJECT_NAME.xcarchive/Info.plist"
-          echo '</dict>' >> "$PROJECT_NAME.xcarchive/Info.plist"
-          echo '</plist>' >> "$PROJECT_NAME.xcarchive/Info.plist"
+          cat > "$PROJECT_NAME.xcarchive/Info.plist" << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>ApplicationProperties</key>
+	<dict>
+		<key>CFBundleIdentifier</key>
+		<string>com.example.BootMonitor</string>
+		<key>CFBundleShortVersionString</key>
+		<string>1.0.0</string>
+		<key>CFBundleVersion</key>
+		<string>1</string>
+	</dict>
+	<key>ArchiveVersion</key>
+	<integer>2</integer>
+	<key>CreationDate</key>
+	<date>2024-01-01T00:00:00Z</date>
+	<key>Name</key>
+	<string>BootMonitor</string>
+	<key>SchemeName</key>
+	<string>BootMonitor</string>
+</dict>
+</plist>
+EOF
         fi
         echo "Archive handling completed"
 
     - name: Экспорт IPA файла (без подписи)
       run: |
         # Создание exportOptions.plist для неподписанного приложения
-        echo '<?xml version="1.0" encoding="UTF-8"?>' > exportOptions.plist
-        echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> exportOptions.plist
-        echo '<plist version="1.0">' >> exportOptions.plist
-        echo '<dict>' >> exportOptions.plist
-        echo '<key>method</key>' >> exportOptions.plist
-        echo '<string>development</string>' >> exportOptions.plist
-        echo '<key>compileBitcode</key>' >> exportOptions.plist
-        echo '<false/>' >> exportOptions.plist
-        echo '<key>thinning</key>' >> exportOptions.plist
-        echo '<string><none></string>' >> exportOptions.plist
-        echo '<key>signingStyle</key>' >> exportOptions.plist
-        echo '<string>manual</string>' >> exportOptions.plist
-        echo '<key>stripSwiftSymbols</key>' >> exportOptions.plist
-        echo '<true/>' >> exportOptions.plist
-        echo '</dict>' >> exportOptions.plist
-        echo '</plist>' >> exportOptions.plist
+        cat > exportOptions.plist << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>development</string>
+	<key>compileBitcode</key>
+	<false/>
+	<key>thinning</key>
+	<string><none></string>
+	<key>signingStyle</key>
+	<string>manual</string>
+	<key>stripSwiftSymbols</key>
+	<true/>
+</dict>
+</plist>
+EOF
 
         # Создаем директорию для экспорта
         mkdir -p export
