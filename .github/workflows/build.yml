@@ -25,18 +25,25 @@ jobs:
       run: |
         brew install xcbeautify jq
 
+    - name: Создание Xcode проекта из Swift Package
+      run: |
+        # Генерация Xcode проекта из Swift Package
+        swift package generate-xcodeproj
+        echo "Содержимое директории после генерации:"
+        ls -la
+
     - name: Определение параметров проекта
       run: |
         echo "Содержимое директории:"
         ls -la
         
-        # Поиск xcodeproj файлов рекурсивно
+        # Поиск xcodeproj файлов
         PROJECT_FILE=$(find . -name "*.xcodeproj" -type d | head -n 1)
         
         if [ -z "$PROJECT_FILE" ]; then
-          echo "Xcode project not found in current directory structure"
-          echo "Files in current directory:"
-          find . -maxdepth 3 -type f -name "*.xcodeproj" -o -name "*.xcworkspace"
+          echo "Xcode project not found"
+          echo "Все файлы в директории:"
+          find . -type f -name "*.xcodeproj"
           exit 1
         fi
         
@@ -44,11 +51,8 @@ jobs:
         echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
         echo "Found project: $PROJECT_NAME"
 
-        # Получение схемы из проекта
-        SCHEME_NAME=$(xcodebuild -project "$PROJECT_FILE" -list -json 2>/dev/null | jq -r '.project.schemes[0]' 2>/dev/null)
-        if [ "$SCHEME_NAME" = "null" ] || [ -z "$SCHEME_NAME" ]; then
-          SCHEME_NAME="$PROJECT_NAME"
-        fi
+        # Для Swift Package проектов схема обычно совпадает с именем проекта
+        SCHEME_NAME="$PROJECT_NAME"
         echo "SCHEME_NAME=$SCHEME_NAME" >> $GITHUB_ENV
         echo "Using scheme: $SCHEME_NAME"
 
